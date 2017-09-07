@@ -35,6 +35,8 @@ shinyServer(function(input, output) {
   # reactive values (for this session, if third argument in function is session)
   val_P <- reactiveValues(x=NULL)# , y=NULL)
   val_Q <- reactiveValues(x=NULL)# , y=NULL)
+  duration <- reactiveValues(x=NULL)
+  dataset <- NULL
   
   # Listen for clicks on rain plot
   observe({
@@ -61,6 +63,8 @@ shinyServer(function(input, output) {
     })
   })
   
+  
+  
   # Start time
   output$ev_time1 <- renderText({
    val_P$x
@@ -72,35 +76,91 @@ shinyServer(function(input, output) {
   })
   
   # Calculate time difference
-  observe({
-    if (input$calc_duration > 0){
-      
-      output$ev_duration <- renderText({
-        # length(val_P$x)
-        
-        # Time elapsed between chosen 2 points
-        # as.numeric(difftime(val_Q$x, val_P$x, units = "hours"), units = "hours")
-        if (is.null(val_Q$x) | is.null(val_P$x) ){
-          # pass
-        } else {
-          as.numeric(difftime((as.POSIXct(val_Q$x, origin="1970-01-01",  tz="EST") ), 
-                              (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") ), units = "hours"), units = "hours")
-        }
-        
-      })
+  observeEvent(input$calculate, {
+    if (is.null(val_Q$x) | is.null(val_P$x) ){
+      return()
+    } else {
+      duration$x <<- as.numeric(difftime((as.POSIXct(val_Q$x, origin="1970-01-01",  tz="EST") ), 
+                                     (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") ), units = "hours"), units = "hours")
+      duration$x
     }
+    # Was here: output$ev_duration
+    # Poossibly runs automaticlly becase it is nested????
+    
   })
+  
+  output$ev_duration <- renderText({
+    # length(val_P$x)
+    # Time elapsed between chosen 2 points
+    # as.numeric(difftime(val_Q$x, val_P$x, units = "hours"), units = "hours")
+    # if (is.null(val_Q$x) | is.null(val_P$x) ){
+      # pass
+    # } else {
+    duration$x
+    #}
+  })
+  
+  
   
   
   # Clear the points on button click
   observe({
     if (input$clear > 0){
+    
       val_P$x <- NULL
       val_Q$x <- NULL
+      duration$x <- NULL
+      # newDuration <- NULL
       #val_P <- reactiveValues(x=NULL)
       #val_Q <- reactiveValues(x=NULL)
     }
   })
+  
+  
+  output$debug <- renderText({
+    duration$x
+  })
+  
+ # observe({
+#    if (input$save > 0){
+#      data <- as.data.frame(c(val_P$x, val_Q$x, duration), ncol=3)
+#      
+#    }
+#  })
+  
+  datasetInput <- eventReactive(input$save, {
+    Start <- val_P$x
+    End <- val_Q$x
+    Duration <- duration$x
+    if (is.null(dataset)){
+      dataset <<- data.frame(Start, End, Duration)
+      dataset
+    } else{
+      dataset <<- rbind(dataset, c(Start, End, Duration))
+      dataset
+    }
+  })
+
+  
+  # Show the first "n" observations ----
+  output$view <- renderTable({
+    head(datasetInput(), n = length(datasetInput()))
+  })
+  
+  fileName <- reactive({
+    input$dataset_name
+    })
+  
+  # Downloadable csv of selected dataset ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(fileName(), ".csv", sep = ",", dec = ".")
+    },
+    content = function(file) {
+      write.csv(datasetInput(), file, row.names = FALSE)
+    }
+  )
+  
   
   
   # Subset the data to show by date range
