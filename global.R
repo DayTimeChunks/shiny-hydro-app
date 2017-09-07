@@ -19,14 +19,21 @@ library("ggrepel")
 #library("Cairo")
 #library("GGally")
 
+# Needed for time series (only hydrology) and order of samples
 hydro <- read.csv2("data/groupAlteck2016_R.csv")
 hydro$Date = as.POSIXct(strptime(hydro$Date, "%Y-%m-%d %H:%M", tz="CET"))
 hydro$Weeks = as.factor(as.character(hydro$Weeks))
 
-hydro = hydro[, c("Date","sampleQ", "Type", "Q.HW1", "Weeks", "SubWeeks", "WeekNo")]
+hydro = hydro[, c("Date",
+                  "sampleQ", "Type", 
+                  "Q.HW1", "Rain12min.mm", 
+                  "Weeks", "SubWeeks", "WeekNo")]
 
 
 
+# TODO: 
+# update this data frame:
+# Needed for scatter plots
 AOdf = read.csv2("data/AOdataframe_R.csv")
 AOdf = AOdf[, c("WeekSubWeek", "ti", "tf",
                 "diss.d13C","SD.d13C", "filt.d13C", "filt.SD.d13C",        

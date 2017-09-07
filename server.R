@@ -5,21 +5,138 @@ library(dplyr)
 library(gridExtra)
 #library(tidyr)
 source("global.R")
+library(base)
 
 # Objects from "global.R": 
 # - hydro
 
+# Reminder Notes 
+
+# 1
+# We create reactive dataframes (rx.df), 
+# from static data frames (stat.df) as:
+
+  # rx.df -> reactive({stat.df})
+
+# the rx.df needs to be called as a function:
+  # rx.df()
+
+# 2 
+# We can also nest reactivty:
+
+  # rx.df2 -> reactive({ data.frame( rx.df()$X, rx.df()$Y ) })
+
 shinyServer(function(input, output) {
+  
+  # Click on chart and select start and end of event.
+  # Guide: https://shiny.rstudio.com/gallery/dynamic-clustering.html
+  
+  # Create a spot where we can store additional
+  # reactive values (for this session, if third argument in function is session)
+  val_P <- reactiveValues(x=NULL)# , y=NULL)
+  val_Q <- reactiveValues(x=NULL)# , y=NULL)
+  
+  # Listen for clicks on rain plot
+  observe({
+    # Initially will be empty
+    if (is.null(input$plot_click_P)){
+      return()
+    }
+    
+    isolate({
+      val_P$x <- c(val_P$x, input$plot_click_P$x)
+      # val_P$x <- (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") )
+      
+    })
+  })
+  
+  # Listen for clicks on Discharge plot
+  observe({
+    # Initially will be empty
+    if (is.null(input$plot_click_Q)){
+      return()
+    }
+    isolate({
+      val_Q$x <- c(val_Q$x, input$plot_click_Q$x)
+    })
+  })
+  
+  # Start time
+  output$ev_time1 <- renderText({
+   val_P$x
+  })
+  
+  # End time
+  output$ev_time2 <- renderText({
+    val_Q$x
+  })
+  
+  # Calculate time difference
+  observe({
+    if (input$calc_duration > 0){
+      
+      output$ev_duration <- renderText({
+        # length(val_P$x)
+        
+        # Time elapsed between chosen 2 points
+        # as.numeric(difftime(val_Q$x, val_P$x, units = "hours"), units = "hours")
+        if (is.null(val_Q$x) | is.null(val_P$x) ){
+          # pass
+        } else {
+          as.numeric(difftime((as.POSIXct(val_Q$x, origin="1970-01-01",  tz="EST") ), 
+                              (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") ), units = "hours"), units = "hours")
+        }
+        
+      })
+    }
+  })
+  
+  
+  # Clear the points on button click
+  observe({
+    if (input$clear > 0){
+      val_P$x <- NULL
+      val_Q$x <- NULL
+      #val_P <- reactiveValues(x=NULL)
+      #val_Q <- reactiveValues(x=NULL)
+    }
+  })
+  
+  
+  # Subset the data to show by date range
+  hydro2_ev <- reactive({
+    subset(hydro, Date >= input$dates_ev[1] & Date <= input$dates_ev[2])
+    # input is defined in "ui", as: inputId="dates"
+  })
   
   # Subset the data to show by date range
   hydro2 <- reactive({
     subset(hydro, Date >= input$dates[1] & Date <= input$dates[2])
+    # input is defined in "ui", as: inputId="dates"
+  })
+  
+  # New
+  # Get Date and Discharge values to plot as data.frame (relevant to plot with rectangles)
+  hydroFlux_ev <- reactive({ 
+    data.frame(my_x_flux = hydro2_ev()$Date, my_y_flux= hydro2_ev()$Q.HW1)
   })
   
   # New
   # Get Date and Discharge values to plot as data.frame (relevant to plot with rectangles)
   hydroFlux <- reactive({ 
     data.frame(my_x_flux = hydro2()$Date, my_y_flux= hydro2()$Q.HW1)
+  })
+  
+  # New
+  # Get Date and rainfall values to plot as data.frame (relevant to plot with rectangles)
+  hydroRain_ev <- reactive({ 
+    data.frame(my_x_flux = hydro2_ev()$Date, my_y_rain= hydro2_ev()$Rain12min.mm)
+  })
+  
+  # New
+  # Get Date and rainfall values to plot as data.frame (relevant to plot with rectangles)
+  hydroRain <- reactive({ 
+    data.frame(my_x_flux = hydro2()$Date, my_y_rain= hydro2()$Rain12min.mm)
   })
   
   # New
@@ -32,7 +149,126 @@ shinyServer(function(input, output) {
   })
   
   # New
-  # Add one dynamic rectangle
+  # Add dynamic rectangle for rain
+  rectanglesRain <- reactive({
+    
+    if (input$week == "W0"){
+      
+      data.frame(xmin = as.POSIXct('2016-03-25 12:04:00'),
+                 xmax = as.POSIXct('2016-03-29 06:04:00'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W1"){
+      
+      data.frame(xmin = as.POSIXct('2016-03-30 06:20:00'),
+                 xmax = as.POSIXct('2016-04-05 15:07:00'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W2"){
+      
+      data.frame(xmin = as.POSIXct('2016-04-05 16:07:00'),
+                 xmax = as.POSIXct('2016-04-15 00:38:50'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W3"){
+      
+      data.frame(xmin = as.POSIXct('2016-04-15 21:54:00'),
+                 xmax = as.POSIXct('2016-04-21 09:11:00'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W4"){
+      
+      data.frame(xmin = as.POSIXct('2016-04-21 19:50:00'),
+                 xmax = as.POSIXct('2016-04-26 06:38:00'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W5"){
+      
+      data.frame(xmin = as.POSIXct('2016-04-26 19:39:00'),
+                 xmax = as.POSIXct('2016-05-03 12:02:00'),
+                 ymin = 0.0, 
+                 ymax = 2.5
+      )
+    } else if (input$week == "W6"){
+      
+      data.frame(xmin = as.POSIXct('2016-05-03 17:11:00'),
+                 xmax = as.POSIXct('2016-05-13 19:05:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W7"){
+      
+      data.frame(xmin = as.POSIXct('2016-05-13 19:05:00'),
+                 xmax = as.POSIXct('2016-05-16 15:11:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W8"){
+      
+      data.frame(xmin = as.POSIXct('2016-05-18 03:56:00'),
+                 xmax = as.POSIXct('2016-05-23 18:02:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W9"){
+      
+      data.frame(xmin = as.POSIXct('2016-05-25 04:38:00'),
+                 xmax = as.POSIXct('2016-05-30 17:28:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W10"){
+      
+      data.frame(xmin = as.POSIXct('2016-05-31 13:25:00'),
+                 xmax = as.POSIXct('2016-06-04 15:31:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W11"){
+      
+      data.frame(xmin = as.POSIXct('2016-06-07 19:33:00'),
+                 xmax = as.POSIXct('2016-06-14 13:06:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W12"){
+      
+      data.frame(xmin = as.POSIXct('2016-06-14 14:06:00'),
+                 xmax = as.POSIXct('2016-06-17 11:05:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W13"){
+      
+      data.frame(xmin = as.POSIXct('2016-06-22 02:04:00'),
+                 xmax = as.POSIXct('2016-06-28 08:55:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W14"){
+      
+      data.frame(xmin = as.POSIXct('2016-06-28 09:55:00'),
+                 xmax = as.POSIXct('2016-07-04 14:41:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    } else if (input$week == "W15"){
+      
+      data.frame(xmin = as.POSIXct('2016-07-04 15:41:00'),
+                 xmax = as.POSIXct('2016-07-12 02:42:00'),
+                 ymin = 0.0, 
+                 ymax = 10.0
+      )
+    }
+  })
+  
+  # New
+  # Add dynamic rectangle for discharge
   rectangles <- reactive({
     
     if (input$week == "W0"){
@@ -225,28 +461,73 @@ shinyServer(function(input, output) {
     
   })
   
+  # Year-long rain plot (Event Selection)
+  output$rain_plot_ev <- renderPlot({
+    ggplot() +
+      # geom_rect(data=rectanglesRain(), aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), fill='grey80', alpha=0.8) +
+      geom_line(data=hydroRain_ev(),  aes(x=my_x_flux, y=my_y_rain), color="forestgreen") +
+      # scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      theme_minimal() +
+      #scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
+      xlab("Date") +
+      ylab(expression((mm))) +
+      theme(legend.position=c(.01, .8)) +
+      theme(legend.justification = c(0,0))+
+      #theme(plot.margin = unit(c(1,1,-1.2,1), "lines")) +
+      theme(legend.title=element_blank()) 
+  })
   
+  # Year-long rain plot (Sample Selection)
+  output$rain_plot <- renderPlot({
+    ggplot() +
+      geom_rect(data=rectanglesRain(), aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), fill='grey80', alpha=0.8) +
+      geom_line(data=hydroRain(),  aes(x=my_x_flux, y=my_y_rain), color="forestgreen") +
+      # scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      theme_minimal() +
+      #scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
+      xlab("Date") +
+      ylab(expression((mm))) +
+      theme(legend.position=c(.01, .8)) +
+      theme(legend.justification = c(0,0))+
+      #theme(plot.margin = unit(c(1,1,-1.2,1), "lines")) +
+      theme(legend.title=element_blank()) 
+    
+  })
 
   
-  # Year-long discharge plot
-  output$plot <- renderPlot({
+  # Year-long discharge plot (Event selection)
+  output$plot_ev <- renderPlot({
     ggplot() +
-      geom_rect(data=rectangles(), aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), fill='grey80', alpha=0.8) +
-      geom_line(data=hydroFlux(),  aes(x=my_x_flux, y=my_y_flux), color="blue") +
-      geom_point(data=hydroSamples(),  aes(x=my_x_samples, y=my_y_samples), color="red") +
+      geom_line(data=hydroFlux_ev(),  aes(x=my_x_flux, y=my_y_flux), color="blue") +
       scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
-      #theme_bw() +
-      scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
+      theme_minimal() +
+      # scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
       xlab("Date") +
       ylab(expression((m^3*.h^-1))) +
       theme(legend.position=c(.01, .8)) +
       theme(legend.justification = c(0,0))+
       #theme(plot.margin = unit(c(1,1,-1.2,1), "lines")) +
       theme(legend.title=element_blank()) 
-      
-    
   })
   
+  # Year-long discharge plot (Sample selection)
+  output$plot <- renderPlot({
+    ggplot() +
+      geom_rect(data=rectangles(), aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), fill='grey80', alpha=0.8) +
+      geom_line(data=hydroFlux(),  aes(x=my_x_flux, y=my_y_flux), color="blue") +
+      geom_point(data=hydroSamples(),  aes(x=my_x_samples, y=my_y_samples), color="red") +
+      scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      theme_minimal() +
+      # scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
+      xlab("Date") +
+      ylab(expression((m^3*.h^-1))) +
+      theme(legend.position=c(.01, .8)) +
+      theme(legend.justification = c(0,0))+
+      #theme(plot.margin = unit(c(1,1,-1.2,1), "lines")) +
+      theme(legend.title=element_blank()) 
+    
+    
+  })
   
   # Event plot
   output$studyPlot <- renderPlot({
@@ -256,7 +537,7 @@ shinyServer(function(input, output) {
       #geom_point(data=hydro2()[hydro2()$Weeks==input$weeks,], aes(colour=Type, group=Type)) +
       scale_colour_manual(values=c("blue", "red", "forestgreen", "orange", "purple", "green", "black")) +
       scale_y_continuous(trans=log_trans(), breaks=c(1,5, 10, 50, 100, 500, 1000)) +
-      #theme_bw() +
+      theme_minimal() +
       scale_x_datetime(breaks = date_breaks("days"), labels = date_format("%d/%m")) +
       xlab("Date") +
       ylab(expression((m^3*.h^-1))) +
@@ -428,6 +709,7 @@ shinyServer(function(input, output) {
       #stat_smooth(method = "lm", formula = y ~ poly(x, 2)) +
       #theme(legend.position="bottom") +
       #scale_y_continuous(trans=log_trans(), breaks=c(1, 3, 5, 8, 10, 30, 50, 80, 100, 300)) +
+      theme_minimal() +
       ylab(input$Outcome_Y1) +
       xlab(input$Outcome_X1) +
       geom_text_repel(aes(label=WeekSubWeek, color = factor(Weeks)),
@@ -591,6 +873,7 @@ shinyServer(function(input, output) {
       #stat_smooth(method = "lm", formula = y ~ poly(x, 2)) +
       #theme(legend.position="bottom") +
       #scale_y_continuous(trans=log_trans(), breaks=c(1, 3, 5, 8, 10, 30, 50, 80, 100, 300)) +
+      theme_minimal() +
       ylab(input$Outcome_Y2) +
       xlab(input$Outcome_X2) +
       geom_text_repel(aes(label=WeekSubWeek, color = factor(Weeks)),
