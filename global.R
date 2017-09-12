@@ -21,7 +21,7 @@ library("ggrepel")
 
 # Needed for time series (only hydrology) and order of samples
 hydro <- read.csv2("data/groupAlteck2016_R.csv")
-hydro$Date = as.POSIXct(strptime(hydro$Date, "%Y-%m-%d %H:%M", tz="CET"))
+hydro$Date = as.POSIXct(strptime(hydro$Date, "%Y-%m-%d %H:%M", tz="EST"))
 hydro$Weeks = as.factor(as.character(hydro$Weeks))
 
 hydro = hydro[, c("Date",

@@ -32,8 +32,8 @@ dashboardPage(
                           wellPanel(
                             fluidRow(
                               # Take up 2/3 of the width with this element  
-                              column(2, "Start: ", verbatimTextOutput("ev_time1")),
-                              column(2, "End: ", verbatimTextOutput("ev_time2")),
+                              column(3, "Start: ", verbatimTextOutput("ev_time1")),
+                              column(3, "End: ", verbatimTextOutput("ev_time2")),
                               column(2, "Duration (hrs.): ", verbatimTextOutput("ev_duration")),
                               column(2, "New event:", actionButton("clear", "Clear Points"))
                               )
