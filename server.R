@@ -26,7 +26,7 @@ library(base)
 
   # rx.df2 -> reactive({ data.frame( rx.df()$X, rx.df()$Y ) })
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   
   # Click on chart and select start and end of event.
   # Guide: https://shiny.rstudio.com/gallery/dynamic-clustering.html
@@ -35,72 +35,154 @@ shinyServer(function(input, output) {
   # reactive values (for this session, if third argument in function is session)
   val_P <- reactiveValues(x=NULL)# , y=NULL)
   val_Q <- reactiveValues(x=NULL)# , y=NULL)
+  duration <- reactiveValues(x=NULL)
+  
+  #Start <- NA
+  #End <- NA
+  #Duration <- NA
+  
+  
+  dataset = NULL
+  #dataset <- data.frame("Start" = as.POSIXct(character()), 
+  #                      "End" = as.POSIXct(character()), 
+  #                      "Duration" = numeric(), 
+  #                      stringsAsFactors=FALSE)
+  
+  #dataset <- data.frame(Start = character(), 
+  #                      End = character(), 
+  #                      Duration = character(), 
+  #                      stringsAsFactors=FALSE)
+  #values <- reactiveValues()
+  #values$df <- data.frame(Start = as.POSIXct(character()), End = as.POSIXct(character()), Duration = numeric())
   
   # Listen for clicks on rain plot
   observe({
-    # Initially will be empty
     if (is.null(input$plot_click_P)){
       return()
     }
-    
     isolate({
-      val_P$x <- c(val_P$x, input$plot_click_P$x)
-      # val_P$x <- (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") )
-      
+      # val_P$x <- c(val_P$x, input$plot_click_P$x)
+      val_P$x <- input$plot_click_P$x
+      # val_P$x <- format(as.POSIXct(input$plot_click_P$x, origin="1970-01-01",  tz="EST"), "%d/%m/%Y %H:%M")
     })
   })
   
   # Listen for clicks on Discharge plot
   observe({
-    # Initially will be empty
     if (is.null(input$plot_click_Q)){
       return()
     }
     isolate({
-      val_Q$x <- c(val_Q$x, input$plot_click_Q$x)
+      # val_Q$x <- c(val_Q$x, input$plot_click_Q$x)
+      val_Q$x <- input$plot_click_Q$x
+      # val_Q$x <- format(as.POSIXct(input$plot_click_Q$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M")
+
     })
   })
   
   # Start time
   output$ev_time1 <- renderText({
-   val_P$x
+    # format( as.POSIXct(Sys.Date(),tz="EST")+val_P$x/1000, "%d/%m/%Y %H:%M")
+    if (is.null(val_P$x)){
+      return()
+    } else {
+      #val_P$x
+      format(as.POSIXct(val_P$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M")
+    }
+   
   })
-  
+
   # End time
   output$ev_time2 <- renderText({
-    val_Q$x
-  })
-  
-  # Calculate time difference
-  observe({
-    if (input$calc_duration > 0){
-      
-      output$ev_duration <- renderText({
-        # length(val_P$x)
-        
-        # Time elapsed between chosen 2 points
-        # as.numeric(difftime(val_Q$x, val_P$x, units = "hours"), units = "hours")
-        if (is.null(val_Q$x) | is.null(val_P$x) ){
-          # pass
-        } else {
-          as.numeric(difftime((as.POSIXct(val_Q$x, origin="1970-01-01",  tz="EST") ), 
-                              (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") ), units = "hours"), units = "hours")
-        }
-        
-      })
+    if (is.null(val_Q$x)){
+      return()
+    } else {
+      # val_Q$x
+      format(as.POSIXct(val_Q$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M")
     }
   })
   
+  # Calculate time difference
+  observeEvent(input$calculate, {
+    if (is.null(val_Q$x) | is.null(val_P$x) ){
+      return()
+    } else {
+      # duration$x <<- as.numeric(difftime(val_Q$x, val_P$x, units = "hours"), units = "hours")
+      duration$x <<- as.numeric(difftime((as.POSIXct(val_Q$x, origin="1970-01-01",  tz="EST") ), 
+                                     (as.POSIXct(val_P$x, origin="1970-01-01",  tz="EST") ), units = "hours"), units = "hours")
+      duration$x
+    }
+  })
+  
+  output$ev_duration <- renderText({
+    duration$x
+  })
   
   # Clear the points on button click
   observe({
     if (input$clear > 0){
       val_P$x <- NULL
       val_Q$x <- NULL
-      #val_P <- reactiveValues(x=NULL)
-      #val_Q <- reactiveValues(x=NULL)
-    }
+      duration$x <- NULL
+     }
   })
+  
+  output$debug <- renderText({
+    duration$x
+  })
+  
+  datasetInput <- eventReactive(input$save, {
+    
+    Start <- format(as.POSIXct(val_P$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M") # val_P$x 
+    End <- format(as.POSIXct(val_Q$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M") #  val_Q$x
+    Duration <- duration$x
+    #if (is.null(dataset)){
+    #  dataset <- data.frame(Start, End, Duration)
+    #  dataset
+    #} else{
+    
+    new.event <- c(Start, End, Duration)
+    dataset <<- rbind(dataset, new.event)
+    dataset
+    #}
+    
+  })
+    
+ # newEntry <- eventReactive(input$save, {
+#    
+#      Start <- format(as.POSIXct(val_P$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M") # val_P$x 
+#      End <- format(as.POSIXct(val_Q$x, origin="1970-01-01" , tz = "EST"), "%d/%m/%Y %H:%M") #  val_Q$x
+#      Duration <- duration$x
+#      newLine <- c(Start, End, Duration)
+#      values$df <- rbind(values$df, newLine)
+#  })
+  
+  # Show the first "n" observations ----
+  output$view <- 
+    renderTable({
+    # renderPrint({ 
+    table <- data.frame( datasetInput() )
+    names(table) <- c("Start", "End", "Duration") 
+    table
+    # str(datasetInput())
+  })
+  
+  fileName <- reactive({
+    input$dataset_name
+    })
+  
+  # Downloadable csv of selected dataset ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(fileName(), ".csv")
+    },
+    content = function(file) {
+      df <- data.frame(datasetInput())
+      names(df) <- c("Start", "End", "Duration") 
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+  
   
   
   # Subset the data to show by date range
@@ -461,12 +543,16 @@ shinyServer(function(input, output) {
     
   })
   
+  #Our transformation function to define sig digits on axes
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
   # Year-long rain plot (Event Selection)
   output$rain_plot_ev <- renderPlot({
     ggplot() +
       # geom_rect(data=rectanglesRain(), aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), fill='grey80', alpha=0.8) +
       geom_line(data=hydroRain_ev(),  aes(x=my_x_flux, y=my_y_rain), color="forestgreen") +
       # scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      scale_y_continuous(labels = scaleFUN)+
       theme_minimal() +
       #scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
       xlab("Date") +
@@ -499,7 +585,9 @@ shinyServer(function(input, output) {
   output$plot_ev <- renderPlot({
     ggplot() +
       geom_line(data=hydroFlux_ev(),  aes(x=my_x_flux, y=my_y_flux), color="blue") +
-      scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      # scale_y_continuous(trans=log_trans(), breaks=c(1,10,100,1000)) +
+      #scale_y_continuous(trans=log_trans(), labels = scaleFUN) +
+      scale_y_continuous(labels = scaleFUN) +
       theme_minimal() +
       # scale_x_datetime(breaks = date_breaks("week"), labels = date_format("%d/%m")) +
       xlab("Date") +

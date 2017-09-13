@@ -21,20 +21,30 @@ dashboardPage(
                tabsetPanel( # myID = Hydrology
                  tabPanel("Event Selection",
                           h3("Select event:"),
-                          p("Test"),
+                          p("Select the interval of each event by:"),
+                          p("1) Clicking on the Rainfall plot to define START time"),
+                          p("2) Clicking on the Discharge plot to define END time"),
+                          p("3) If you are happy hit 'Calculation Duration' or 'Clear points' to re-select"),
+                          p("4) Save selected interval duration to session memory."),
+                          fluidRow(mainPanel(h4("Selected events:"), tableOutput("view"))),
+                      
                           # Create a row for additional information
-                          fluidRow(
-                            # Take up 2/3 of the width with this element  
-                            column(2, "Start: ", verbatimTextOutput("ev_time1")),
-                            column(2, "End: ", verbatimTextOutput("ev_time2")),
-                            column(2, "Duration (hrs.): ", verbatimTextOutput("ev_duration")),
-                            # And the remaining 1/3 with this one
-                            column(2, " ", actionButton("calc_duration", "Calculate") ),
-                            column(2, " ", actionButton("record_duration", "Keep")),
-                            column(2, " ", actionButton("clear", "Clear Points")),
-                            br(),
-                            br()
-                          ),    
+                          wellPanel(
+                            fluidRow(
+                              # Take up 2/3 of the width with this element  
+                              column(3, "Start: ", verbatimTextOutput("ev_time1")),
+                              column(3, "End: ", verbatimTextOutput("ev_time2")),
+                              column(2, "Duration (hrs.): ", verbatimTextOutput("ev_duration")),
+                              column(2, "New event:", actionButton("clear", "Clear Points"))
+                              )
+                            ),
+                          fluidRow(column(3, " ", actionButton("calculate", "Calculate event duration") ),
+                                   column(3, " ", actionButton("save", "Save current event")),
+                                   column(2, " ",  downloadButton("downloadData", "Download")),
+                                   # column(2, " ",  textInput(inputId = "dataset_name", label = NULL, value = "value")), # Not working...
+                                   br(),
+                                   br()),
+                        
                           wellPanel( # myId =  Date Selection
                             fluidRow(column(10, offset = 1, sliderInput(inputId="dates_ev", label="Dates", 
                                                                         min = as.POSIXct('2016-03-25 00:00:00'), max = as.POSIXct('2016-07-12 10:20:00'),
