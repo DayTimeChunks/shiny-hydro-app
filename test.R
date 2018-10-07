@@ -1,6 +1,18 @@
 
-h <- read.csv2("/Users/DayTightChunks/Documents/PhD/Routput/Alteck/R/groupAlteck2016_R.csv")
-d <- hydro %>% filter(Date >= as.POSIXct('2016-03-25 12:04:00') & Date <= as.POSIXct('2016-03-29 06:04:00'))
+library("dplyr")
+library("ggplot2")
+library("scales")
+library("ggrepel")
+library(tidyr)
+
+
+setwd("/Users/DayTightChunks/Documents/PhD/shiny-hydro-app")
+getwd()
+h <- read.csv2("data/groupAlteck2016_R.csv")
+h$Date = as.POSIXct(strptime(h$Date, "%Y-%m-%d %H:%M", tz="EST"))
+d <- h %>% filter(Date >= as.POSIXct('2016-03-30 00:00:00',  tz="EST") & Date < as.POSIXct('2016-04-01 00:00:00',  tz="EST"))
+
+
 View(d)
 
 w <- d$WeekNo 
