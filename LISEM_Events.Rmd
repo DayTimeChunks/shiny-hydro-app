@@ -1,0 +1,157 @@
+---
+title: "LISEM Event Selection"
+author: "PAZ"
+date: "20/10/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+Sys.setlocale("LC_ALL", "English")
+
+library("dplyr")
+```
+
+# Paths and data sets
+
+Data used here was tested in "LISEM_EvRain_2min.R"
+
+```{r}
+setwd("/Users/DayTightChunks/Documents/PhD/shiny-hydro-app")
+path_master = 
+  file.path("/Users/DayTightChunks/Documents/PhD/Models/phd-model-master/Analysis/Data")
+
+# Hydrochemical Sample Information
+# Use this table to select detailed events to 
+#   visualize against LISEM (namely, those with an EventLabel) 
+# constraints = read.csv(file.path(path_master, 'BEACH_R/visuals_b2l_R04.csv'))
+#constraints = constraints[complete.cases(constraints$EventLabel), ]
+#constraints = constraints[complete.cases(constraints$delta.obs), ]
+
+rain2min =  read.csv2("Data/Rain2min.csv", header = T, dec = ".")
+rain2min$Date <- as.POSIXct(strptime(rain2min$Date, 
+                                     "%d/%m/%Y %H:%M", 
+                                     tz="EST"))
+names(rain2min) = c("Date", "Rain2min.mm")
+sum(is.na(rain2min$Rain2min.mm))
+
+h_temp = rain2min[, c("Date", "Rain2min.mm")]
+names(h_temp) = c("Date", "Rain.mm")
+time_step = 2
+```
+
+# Event selection and test
+
+```{r}
+#################################
+# Edit Section - Event Selection
+################################
+day = 243
+bbreak = F
+if (day == 183){
+  # FIRST EVENT 
+  start_lisem = '2016-03-30 21:18:00'
+  beach_break = '2016-03-31 00:00:00'
+  end_lisem = '2016-03-31 00:40:00'
+
+} else if (day == 188) { # April 5
+  #start_lisem = '2016-04-05 03:00:00' # # v1
+  start_lisem = '2016-04-05 16:10:00'
+  end_lisem = '2016-04-05 18:00:00'
+  beach_break = end_lisem
+  # } else if (day == 200) { # April 17 # v1
+  
+} else if (day == 199) { # April 16
+  # April 16 & 17, long day with continous intensity
+  start_lisem = '2016-04-16 04:00:00'
+  # beach_break = '2016-04-17 00:00:00' # v1
+  # end_lisem = '2016-04-17 03:02:00' # v1
+  end_lisem = '2016-04-16 09:00:00'
+  beach_break = end_lisem
+  
+} else if (day == 214) {
+  # April 30 & May 1st
+  start_lisem = '2016-04-30 22:00:00'
+  beach_break = '2016-05-01 00:00:00'
+  end_lisem = '2016-05-01 03:00:00'
+  
+} else if (day == 225) { # First Likely runoff event on the 12th!
+  # May 11 & 12
+  # start_lisem = '2016-05-11 18:00:00'
+  #beach_break = '2016-05-12 00:00:00'
+  #end_lisem = '2016-05-12 10:00:00'
+  start_lisem = '2016-05-12 07:00:00'
+  end_lisem = '2016-05-12 10:00:00'
+  beach_break = end_lisem
+  
+} else if (day == 242) { # "May 29" <- Runoff event
+  
+  start_lisem = '2016-05-29 16:30:00'
+  end_lisem = '2016-05-29 19:00:00'
+  beach_break = end_lisem
+  
+}  else if (day == 243) { # "May 30" <- Infiltration event
+  
+  start_lisem = '2016-05-30 08:30:00'
+  end_lisem = '2016-05-30 13:00:00'
+  beach_break = end_lisem
+  # 7:00 to 11:30 at 10mm
+  # 4:10 to 8:40 at 10mm
+}
+
+if (bbreak) {
+  head_event = h_temp %>% 
+    filter(Date >= as.POSIXct(start_lisem,  tz="EST") & 
+             Date < as.POSIXct(beach_break,  tz="EST"))
+  tail_event = h_temp %>% 
+    filter(Date >= as.POSIXct(beach_break,  tz="EST") & 
+             Date <= as.POSIXct(end_lisem,  tz="EST"))
+  
+  print("Subtract from BEACH: Day 1") 
+  # LISEM rain (head event), subtract from BEACH TSS
+  print(cumsum(head_event$Rain.mm)[length(head_event$Rain.mm)])
+  print("Subtract from BEACH: Day 2")
+  # LISEM rain (tail event), subtract from BEACH TSS
+  print(cumsum(tail_event$Rain.mm)[length(tail_event$Rain.mm)])
+  
+  print("Target: ") 
+  print(beach_break)
+  
+} else {
+  event = h_temp %>% 
+    filter(Date >= as.POSIXct(start_lisem,  tz="EST") & 
+             Date < as.POSIXct(end_lisem,  tz="EST"))
+  
+  # LISEM rain (event), subtract from BEACH TSS
+  print("Subtract from BEACH: ") 
+  print(cumsum(event$Rain.mm)[length(event$Rain.mm)])
+  
+  print("Target: ") 
+  print(beach_break)
+}
+
+x1 <- h_temp %>% 
+  filter(Date >= as.POSIXct(start_lisem,  tz="EST") & 
+           Date <= as.POSIXct(end_lisem,  tz="EST"))
+
+
+x1$tmp = time_step
+x1$tmp[1]=0
+x1$time = cumsum(x1$tmp)
+x1$rain = x1$Rain.mm * 60
+x1$time[x1$Date==as.POSIXct(beach_break, tz="EST")]
+# CHECK ABOVE!
+```
+
+# Save event
+
+```{r}
+# SAVE
+if (F){
+  x1 = x1[, c("time", "rain")] # Minutes, mm/hr
+  name = paste("Event_", as.character(day), ".txt", sep = "")
+  write.table(x1, name, sep = "\t", row.names = F, col.names = F)
+  
+}
+```
+
