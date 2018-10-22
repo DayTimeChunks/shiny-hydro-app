@@ -46,7 +46,7 @@ time_step = 2
 #################################
 # Edit Section - Event Selection
 ################################
-day = 243
+day = 269
 bbreak = F
 if (day == 183){
   # FIRST EVENT 
@@ -84,19 +84,39 @@ if (day == 183){
   end_lisem = '2016-05-12 10:00:00'
   beach_break = end_lisem
   
-} else if (day == 242) { # "May 29" <- Runoff event
+} else if (day == 242) { # "May 29" <- Runoff event, consecutive 1
   
   start_lisem = '2016-05-29 16:30:00'
   end_lisem = '2016-05-29 19:00:00'
   beach_break = end_lisem
   
-}  else if (day == 243) { # "May 30" <- Infiltration event
+}  else if (day == 243) { # "May 30" <- Infiltration event, consecutive 2
   
   start_lisem = '2016-05-30 08:30:00'
   end_lisem = '2016-05-30 13:00:00'
   beach_break = end_lisem
   # 7:00 to 11:30 at 10mm
   # 4:10 to 8:40 at 10mm
+}  else if (day == 247) { # "June 3" <- Runoff event, consecutive 1
+  
+  start_lisem = '2016-06-03 02:00:00'
+  end_lisem = '2016-06-03 05:00:00'
+  beach_break = end_lisem
+}  else if (day == 248) { # "June 4" <- Runoff event, consecutive 2
+  
+  start_lisem = '2016-06-04 07:50:00'
+  end_lisem = '2016-06-04 11:00:00'  # <- There is a second peak at the end of this day!
+  beach_break = end_lisem
+}  else if (day == 260) { # "June 16" <- Runoff event, Type 1
+  
+  start_lisem = '2016-06-16 22:00:00'
+  end_lisem = '2016-06-16 23:58:00'  
+  beach_break = end_lisem
+}  else if (day == 269) { # "June 25" <- Runoff event, Type 1
+  
+  start_lisem = '2016-06-25 02:00:00'
+  end_lisem = '2016-06-25 06:00:00'  
+  beach_break = end_lisem
 }
 
 if (bbreak) {
@@ -126,7 +146,7 @@ if (bbreak) {
   print("Subtract from BEACH: ") 
   print(cumsum(event$Rain.mm)[length(event$Rain.mm)])
   
-  print("Target: ") 
+  print("Target date-time: ") 
   print(beach_break)
 }
 
@@ -139,6 +159,7 @@ x1$tmp = time_step
 x1$tmp[1]=0
 x1$time = cumsum(x1$tmp)
 x1$rain = x1$Rain.mm * 60
+print("Target minute: ")
 x1$time[x1$Date==as.POSIXct(beach_break, tz="EST")]
 # CHECK ABOVE!
 ```
